@@ -1,4 +1,5 @@
 import string
+import time
 
 from .credentials import ON_APPENGINE, build_token
 from .firebase import Firebase
@@ -105,4 +106,7 @@ def send_message(client_id, message, firebase_client=None):
     """
     _validate_client_id(client_id)
     client = firebase_client or _get_client()
-    client.patch(u"firechannels/{}.json".format(client_id), {"message": message})
+    client.patch(u"firechannels/{}.json".format(client_id), {
+        "message": message,
+        "timestamp": int(time.time() * 1000),
+    })
