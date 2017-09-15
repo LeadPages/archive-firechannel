@@ -1,0 +1,9 @@
+*.py[co]
+/.cache
+/.coverage
+/.tox
+/build
+/dist
+/firechannel.egg-info
+/htmlcov
+__pycache__

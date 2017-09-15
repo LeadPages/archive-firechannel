@@ -1,0 +1,5 @@
+include README.md
+include requirements*.txt
+include setup.cfg
+include setup.py
+include static/firechannel.js
