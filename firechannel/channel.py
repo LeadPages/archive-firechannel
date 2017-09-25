@@ -1,7 +1,8 @@
 import string
 import time
+import uuid
 
-from .credentials import build_token
+from .credentials import build_token, decode_token
 from .firebase import Firebase
 
 _client = None
@@ -41,15 +42,27 @@ def set_client(client):
     _client = client
 
 
-def _validate_client_id(client_id):
+def decode_client_id(token, firebase_client=None):
+    """Given a token, decode and return its client id.
+    """
+    client = firebase_client or get_client()
+    return decode_token(client.credentials, token)["uid"]
+
+
+def _validate_client_id(client_id, firebase_client=None):
     if not isinstance(client_id, basestring):
         raise TypeError("client_id must be a string")
+
+    elif client_id.count(".") == 2:
+        return decode_client_id(client_id, firebase_client=firebase_client)
 
     elif len(client_id) > 64:
         raise ValueError("client_id must be at most 64 characters long")
 
     elif set(client_id) - VALID_CHARS:
         raise ValueError("client_id contains invalid characters")
+
+    return client_id
 
 
 def _validate_duration(duration_minutes):
@@ -60,7 +73,7 @@ def _validate_duration(duration_minutes):
         raise ValueError("duration_minutes must be a value between 1 and 1440")
 
 
-def create_channel(client_id, duration_minutes=60, firebase_client=None):
+def create_channel(client_id=None, duration_minutes=60, firebase_client=None):
     """Create a channel.
 
     Parameters:
@@ -78,16 +91,16 @@ def create_channel(client_id, duration_minutes=60, firebase_client=None):
     Returns:
       str: A token that the client can use to connect to the channel.
     """
-    _validate_client_id(client_id)
-    _validate_duration(duration_minutes)
+    if client_id is None:
+        client_id = str(uuid.uuid4())
 
     client = firebase_client or get_client()
-    params = {"uid": client_id}
+    client_id = _validate_client_id(client_id, firebase_client=client)
+    _validate_duration(duration_minutes)
 
     # Delete the channel so any old data isn't sent to the client.
     delete_channel(client_id, firebase_client=client)
-
-    return build_token(client.credentials, params, duration_minutes)
+    return build_token(client.credentials, {"uid": client_id}, duration_minutes)
 
 
 def delete_channel(client_id, firebase_client=None):
@@ -103,8 +116,8 @@ def delete_channel(client_id, firebase_client=None):
       TypeError: When client_id has an invalid type.
       ValueError: When client_id has an invalid value.
     """
-    _validate_client_id(client_id)
     client = firebase_client or get_client()
+    client_id = _validate_client_id(client_id, firebase_client=client)
     client.delete(u"firechannels/{}.json".format(client_id))
 
 
@@ -122,8 +135,8 @@ def send_message(client_id, message, firebase_client=None):
       TypeError: When client_id has an invalid type.
       ValueError: When client_id has an invalid value.
     """
-    _validate_client_id(client_id)
     client = firebase_client or get_client()
+    client_id = _validate_client_id(client_id, firebase_client=client)
     client.patch(u"firechannels/{}.json".format(client_id), {
         "message": message,
         "timestamp": int(time.time() * 1000),

@@ -3,17 +3,22 @@ import pytest
 
 from base64 import urlsafe_b64decode
 from firechannel import create_channel, delete_channel, send_message
+from firechannel.channel import decode_client_id
 
 
 def decode(blob):
     return json.loads(urlsafe_b64decode(blob))
 
 
-def test_can_create_channels():
+@pytest.mark.parametrize("client_id", (
+    None,
+    "test-channel",
+))
+def test_can_create_channels(client_id):
     try:
         # Given that I have a Firebase client
         # If I attempt to create a channel
-        token = create_channel("test-channel")
+        token = create_channel(client_id)
 
         # I expect to get a valid token back
         header, payload, _ = token.split(".")
@@ -21,10 +26,15 @@ def test_can_create_channels():
         payload = decode(payload)
 
         assert header == {"alg": "RS256", "typ": "JWT"}
-        assert payload["uid"] == "test-channel"
+
+        if client_id:
+            assert payload["uid"] == "test-channel"
+        else:
+            assert payload["uid"]
 
     finally:
-        delete_channel("test-channel")
+        if client_id:
+            delete_channel("test-channel")
 
 
 @pytest.mark.parametrize("value,error", [
@@ -70,6 +80,31 @@ def test_can_send_messages_on_channels(client, random_channel):
 
     # If I send it a message
     send_message(channel_id, "hello!")
+
+    # I expect the channel to be updated in Firebase
+    data = client.get("firechannels/" + channel_id + ".json")
+    assert data["message"] == "hello!"
+
+
+def test_can_send_messages_on_channels_using_token(client, random_channel):
+    # Given that I have a channel
+    channel_id, token = random_channel
+
+    # If I send it a message
+    send_message(token, "hello!")
+
+    # I expect the channel to be updated in Firebase
+    data = client.get("firechannels/" + channel_id + ".json")
+    assert data["message"] == "hello!"
+
+
+def test_can_send_messages_on_anon_channels(credentials, client):
+    # Given that I have a channel
+    token = create_channel()
+    channel_id = decode_client_id(token)
+
+    # If I send it a message
+    send_message(token, "hello!")
 
     # I expect the channel to be updated in Firebase
     data = client.get("firechannels/" + channel_id + ".json")
