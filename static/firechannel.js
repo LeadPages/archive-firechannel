@@ -2,11 +2,13 @@ window.Firechannel = (function() {
   /**
    * Firechannels are used to connect to Firebase.
    *
-   * @param channelId The id of the channel to listen on.
    * @param token The auth token from the server.
    */
-  var Firechannel = function(channelId, token) {
-    this.channelId = channelId;
+  var Firechannel = function(token) {
+    var segments = token.split(".");
+    var params = JSON.parse(atob(segments[1]));
+
+    this.channelId = params.uid;
     this.token = token;
   };
 

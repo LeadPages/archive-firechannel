@@ -24,7 +24,7 @@ socket.onmessage = function(data) { console.log(data); };
 change the first line to
 
 ``` javascript
-var channel = new Firechannel("{{channel_id}}", "{{token}}");
+var channel = new Firechannel("{{token}}");
 ```
 
 
