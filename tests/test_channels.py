@@ -9,11 +9,11 @@ def decode(blob):
     return json.loads(urlsafe_b64decode(blob))
 
 
-def test_can_create_channels(client):
+def test_can_create_channels():
     try:
         # Given that I have a Firebase client
         # If I attempt to create a channel
-        token = create_channel("test-channel", firebase_client=client)
+        token = create_channel("test-channel")
 
         # I expect to get a valid token back
         header, payload, _ = token.split(".")
@@ -24,7 +24,7 @@ def test_can_create_channels(client):
         assert payload["uid"] == "test-channel"
 
     finally:
-        delete_channel("test-channel", firebase_client=client)
+        delete_channel("test-channel")
 
 
 @pytest.mark.parametrize("value,error", [
@@ -33,24 +33,24 @@ def test_can_create_channels(client):
     ("foo/bar", ValueError),
     ("foo.json", ValueError),
 ])
-def test_cant_create_channels_with_invalid_client_ids(client, value, error):
+def test_cant_create_channels_with_invalid_client_ids(value, error):
     # Given that I have a Firebase client
     # If I attempt to create a channel with an invalid id
     # I expect an error to be raised
     with pytest.raises(error):
-        create_channel(value, firebase_client=client)
+        create_channel(value)
 
 
 @pytest.mark.parametrize("value,error", [
     (90000, ValueError),
     ("foo", TypeError),
 ])
-def test_cant_create_channels_with_invalid_expiration(client, value, error):
+def test_cant_create_channels_with_invalid_expiration(value, error):
     # Given that I have a Firebase client
     # If I attempt to create a channel with an invalid duration
     # I expect an error to be raised
     with pytest.raises(error):
-        create_channel("test-channel", duration_minutes=value, firebase_client=client)
+        create_channel("test-channel", duration_minutes=value)
 
 
 def test_can_delete_channels(client, random_channel):
@@ -58,7 +58,7 @@ def test_can_delete_channels(client, random_channel):
     channel_id, _ = random_channel
 
     # If I attempt to delete it
-    delete_channel(channel_id, firebase_client=client)
+    delete_channel(channel_id)
 
     # I expect it to be removed from Firebase
     assert client.get("firechannels/" + channel_id + ".json") is None
@@ -69,7 +69,7 @@ def test_can_send_messages_on_channels(client, random_channel):
     channel_id, _ = random_channel
 
     # If I send it a message
-    send_message(channel_id, "hello!", firebase_client=client)
+    send_message(channel_id, "hello!")
 
     # I expect the channel to be updated in Firebase
     data = client.get("firechannels/" + channel_id + ".json")

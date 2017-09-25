@@ -74,7 +74,7 @@ def _build_token(credentials, issuer, params, duration_minutes):
     return payload + "." + urlsafe_b64encode(signature)
 
 
-def build_token_appengine(params, duration_minutes):
+def build_token_appengine(_, params, duration_minutes):
     """Build a token on AppEngine.
     """
     from google.appengine.api import app_identity

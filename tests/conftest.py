@@ -2,7 +2,7 @@ import os
 import pytest
 import time
 
-from firechannel import Firebase, get_credentials, create_channel, delete_channel
+from firechannel import Firebase, set_client, get_credentials, create_channel, delete_channel
 
 
 @pytest.fixture(scope="session")
@@ -12,16 +12,18 @@ def credentials():
     return get_credentials(key_file_path)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def client(credentials):
     project_name = os.getenv("FIREBASE_PROJECT")
     assert project_name, "FIREBASE_PROJECT must be set"
-    return Firebase(project_name, credentials)
+    client = Firebase(project_name, credentials)
+    set_client(client)
+    return client
 
 
 @pytest.fixture()
-def random_channel(client):
+def random_channel():
     channel_id = "test-channel-" + str(int(time.time()))
-    token = create_channel(channel_id, firebase_client=client)
+    token = create_channel(channel_id)
     yield channel_id, token
-    delete_channel(channel_id, firebase_client=client)
+    delete_channel(channel_id)

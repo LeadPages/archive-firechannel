@@ -1,7 +1,7 @@
 import string
 import time
 
-from .credentials import ON_APPENGINE, build_token
+from .credentials import build_token
 from .firebase import Firebase
 
 _client = None
@@ -10,15 +10,35 @@ _client = None
 VALID_CHARS = set(string.ascii_letters + string.digits + "-_")
 
 
-def _get_client():
-    global _client
-    if not ON_APPENGINE:
-        raise RuntimeError("Cannot use default client off of AppEngine.")
+def get_client():
+    """Get the current global client instance.
 
+    If one doesn't currently exist, a default client will be created
+    and returned on GAE and a RuntimeError will be raised everywhere
+    else.
+
+    Returns:
+      Firebase
+    """
+    global _client
     if _client is None:
-        from google.appengine.api import app_identity
-        _client = Firebase(app_identity.get_application_id())
+        try:
+            from google.appengine.api import app_identity
+            _client = Firebase(app_identity.get_application_id())
+        except ImportError:
+            raise RuntimeError("Cannot use default client off of AppEngine.")
+
     return _client
+
+
+def set_client(client):
+    """Set the global client instance.
+
+    Parameters:
+      client(Firebase)
+    """
+    global _client
+    _client = client
 
 
 def _validate_client_id(client_id):
@@ -61,14 +81,12 @@ def create_channel(client_id, duration_minutes=60, firebase_client=None):
     _validate_client_id(client_id)
     _validate_duration(duration_minutes)
 
-    # Delete the channel so any old data isn't sent to the client.
-    delete_channel(client_id, firebase_client=firebase_client)
-
+    client = firebase_client or get_client()
     params = {"uid": client_id}
-    if ON_APPENGINE:
-        return build_token(params, duration_minutes)
 
-    client = firebase_client or _get_client()
+    # Delete the channel so any old data isn't sent to the client.
+    delete_channel(client_id, firebase_client=client)
+
     return build_token(client.credentials, params, duration_minutes)
 
 
@@ -86,7 +104,7 @@ def delete_channel(client_id, firebase_client=None):
       ValueError: When client_id has an invalid value.
     """
     _validate_client_id(client_id)
-    client = firebase_client or _get_client()
+    client = firebase_client or get_client()
     client.delete(u"firechannels/{}.json".format(client_id))
 
 
@@ -105,7 +123,7 @@ def send_message(client_id, message, firebase_client=None):
       ValueError: When client_id has an invalid value.
     """
     _validate_client_id(client_id)
-    client = firebase_client or _get_client()
+    client = firebase_client or get_client()
     client.patch(u"firechannels/{}.json".format(client_id), {
         "message": message,
         "timestamp": int(time.time() * 1000),
