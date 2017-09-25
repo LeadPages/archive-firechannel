@@ -3,6 +3,8 @@ import json
 import time
 
 from base64 import urlsafe_b64encode, urlsafe_b64decode
+from oauth2client.client import GoogleCredentials
+
 
 try:
     from google.appengine.api import app_identity
@@ -10,8 +12,6 @@ try:
 
     ON_APPENGINE = True
 except ImportError:
-    from oauth2client.client import GoogleCredentials
-
     ON_APPENGINE = False
 
 
