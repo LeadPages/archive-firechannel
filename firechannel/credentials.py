@@ -30,7 +30,7 @@ SCOPES = [
 ]
 
 #: The endpoint used to verify identities.
-IDENTITY_ENDPOINT = "https://identitytoolkit.googleapis.com/"
+IDENTITY_ENDPOINT = "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit"
 
 
 #: The standard token header.
