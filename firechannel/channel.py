@@ -1,3 +1,4 @@
+import base64
 import string
 import time
 import uuid
@@ -135,9 +136,10 @@ def send_message(client_id, message, firebase_client=None):
       TypeError: When client_id has an invalid type.
       ValueError: When client_id has an invalid value.
     """
+    assert isinstance(message, basestring), "messages must be strings"
     client = firebase_client or get_client()
     client_id = _validate_client_id(client_id, firebase_client=client)
     client.patch(u"firechannels/{}.json".format(client_id), {
-        "message": message,
+        "message": base64.b64encode(message),
         "timestamp": int(time.time() * 1000),
     })

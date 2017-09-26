@@ -2,7 +2,7 @@ import hmac
 import json
 import time
 
-from base64 import urlsafe_b64encode, urlsafe_b64decode
+from base64 import b64encode, b64decode
 from oauth2client.client import GoogleCredentials
 
 
@@ -16,11 +16,11 @@ except ImportError:
 
 
 def encode(data):
-    return urlsafe_b64encode(json.dumps(data, separators=(",", ":")))
+    return b64encode(json.dumps(data, separators=(",", ":")))
 
 
 def decode(data):
-    return json.loads(urlsafe_b64decode(data))
+    return json.loads(b64decode(data))
 
 
 #: The OAuth2 scopes to request when authenticating with Google.
@@ -74,7 +74,7 @@ def _build_token(credentials, issuer, params, duration_minutes):
 
     payload = TOKEN_HEADER + "." + encode(data)
     _, signature = credentials.sign_blob(payload)
-    return payload + "." + urlsafe_b64encode(signature)
+    return payload + "." + b64encode(signature)
 
 
 def build_token_appengine(credentials, params, duration_minutes):
@@ -104,7 +104,7 @@ def _decode_token(credentials, token, verify):
 
     if verify:
         payload = header + "." + data
-        given_signature = urlsafe_b64decode(signature)
+        given_signature = b64decode(signature)
         _, expected_signature = credentials.sign_blob(payload)
         if not hmac.compare_digest(given_signature, expected_signature):
             raise ValueError("Invalid token signature.")

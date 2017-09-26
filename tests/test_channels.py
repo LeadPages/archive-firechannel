@@ -1,13 +1,13 @@
 import json
 import pytest
 
-from base64 import urlsafe_b64decode
+from base64 import b64decode
 from firechannel import create_channel, delete_channel, send_message
 from firechannel.channel import decode_client_id
 
 
 def decode(blob):
-    return json.loads(urlsafe_b64decode(blob))
+    return json.loads(b64decode(blob))
 
 
 @pytest.mark.parametrize("client_id", (
@@ -83,7 +83,7 @@ def test_can_send_messages_on_channels(client, random_channel):
 
     # I expect the channel to be updated in Firebase
     data = client.get("firechannels/" + channel_id + ".json")
-    assert data["message"] == "hello!"
+    assert b64decode(data["message"]) == "hello!"
 
 
 def test_can_send_messages_on_channels_using_token(client, random_channel):
@@ -95,7 +95,7 @@ def test_can_send_messages_on_channels_using_token(client, random_channel):
 
     # I expect the channel to be updated in Firebase
     data = client.get("firechannels/" + channel_id + ".json")
-    assert data["message"] == "hello!"
+    assert b64decode(data["message"]) == "hello!"
 
 
 def test_can_send_messages_on_anon_channels(credentials, client):
@@ -109,6 +109,6 @@ def test_can_send_messages_on_anon_channels(credentials, client):
 
         # I expect the channel to be updated in Firebase
         data = client.get("firechannels/" + channel_id + ".json")
-        assert data["message"] == "hello!"
+        assert b64decode(data["message"]) == "hello!"
     finally:
         delete_channel(channel_id)

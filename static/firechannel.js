@@ -43,12 +43,9 @@ window.Firechannel = (function() {
     ref.on("value", function(ref) {
       try {
         var data = ref.val();
-        if (data === null) {
-          return;
-        }
+        if (data === null) return;
 
-        var message = data.message;
-
+        var message = atob(data.message);
         handler.onmessage ? handler.onmessage(message) : this.onmessage(message);
       } catch (e) {
         handler.onerror ? handler.onerror(e) : this.onerror(e);
