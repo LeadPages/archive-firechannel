@@ -40,9 +40,14 @@ window.Firechannel = (function() {
     this.ref = ref;
     this.handler = handler;
 
-    ref.on("value", function(data) {
+    ref.on("value", function(ref) {
       try {
-        var message = data.val().message;
+        var data = ref.val();
+        if (data === null) {
+          return;
+        }
+
+        var message = data.message;
 
         handler.onmessage ? handler.onmessage(message) : this.onmessage(message);
       } catch (e) {

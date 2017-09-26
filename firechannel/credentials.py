@@ -77,11 +77,13 @@ def _build_token(credentials, issuer, params, duration_minutes):
     return payload + "." + urlsafe_b64encode(signature)
 
 
-def build_token_appengine(_, params, duration_minutes):
+def build_token_appengine(credentials, params, duration_minutes):
     """Build a token on AppEngine.
     """
-    issuer = app_identity.get_service_account_name()
-    return _build_token(app_identity, issuer, params, duration_minutes)
+    if isinstance(credentials, AppAssertionCredentials):
+        issuer = app_identity.get_service_account_name()
+        return _build_token(app_identity, issuer, params, duration_minutes)
+    return build_token_service_key(credentials, params, duration_minutes)
 
 
 def build_token_service_key(credentials, params, duration_minutes):
@@ -93,7 +95,7 @@ def build_token_service_key(credentials, params, duration_minutes):
 
 def _decode_token(credentials, token, verify):
     try:
-        header, data, signature = token.split(".")
+        header, data, signature = map(str, token.split("."))
     except ValueError:
         raise ValueError("Invalid token data.")
 
@@ -110,10 +112,12 @@ def _decode_token(credentials, token, verify):
     return decode(data)
 
 
-def decode_token_appengine(_, token, verify=True):
+def decode_token_appengine(credentials, token, verify=True):
     """Decode a token on AppEngine.
     """
-    return _decode_token(app_identity, token, verify)
+    if isinstance(credentials, AppAssertionCredentials):
+        return _decode_token(app_identity, token, verify)
+    return _decode_token(credentials, token, verify)
 
 
 def decode_token_service_key(credentials, token, verify=True):

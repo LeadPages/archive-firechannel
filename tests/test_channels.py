@@ -99,13 +99,16 @@ def test_can_send_messages_on_channels_using_token(client, random_channel):
 
 
 def test_can_send_messages_on_anon_channels(credentials, client):
-    # Given that I have a channel
-    token = create_channel()
-    channel_id = decode_client_id(token)
+    try:
+        # Given that I have an anonymous channel
+        token = create_channel()
+        channel_id = decode_client_id(token)
 
-    # If I send it a message
-    send_message(token, "hello!")
+        # If I send it a message
+        send_message(token, "hello!")
 
-    # I expect the channel to be updated in Firebase
-    data = client.get("firechannels/" + channel_id + ".json")
-    assert data["message"] == "hello!"
+        # I expect the channel to be updated in Firebase
+        data = client.get("firechannels/" + channel_id + ".json")
+        assert data["message"] == "hello!"
+    finally:
+        delete_channel(channel_id)
