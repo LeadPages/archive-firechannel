@@ -1,4 +1,5 @@
 import base64
+import logging
 import string
 import time
 import uuid
@@ -7,6 +8,7 @@ from .credentials import build_token, decode_token
 from .firebase import Firebase
 
 _client = None
+_logger = logging.getLogger("firechannel.channel")
 
 #: Valid client id characters.
 VALID_CHARS = set(string.ascii_letters + string.digits + "-_")
@@ -120,6 +122,7 @@ def delete_channel(client_id, firebase_client=None):
     client = firebase_client or get_client()
     client_id = _validate_client_id(client_id, firebase_client=client)
     client.delete(u"firechannels/{}.json".format(client_id))
+    _logger.debug("Deleted channel %r.", client_id)
 
 
 def send_message(client_id, message, firebase_client=None):
@@ -143,3 +146,20 @@ def send_message(client_id, message, firebase_client=None):
         "message": base64.b64encode(message),
         "timestamp": int(time.time() * 1000),
     })
+
+
+def find_all_expired_channels(max_age=3600, firebase_client=None):
+    """Returns the ids of any channels to which the last message was
+    sent over some number of seconds ago.
+
+    Parameters:
+      max_age(int): Channels that were last sent a message longer than
+        this value ago are returned.  Defaults to an hour.
+    """
+    client = firebase_client or get_client()
+    cutoff = (time.time() - max_age) * 1000
+    channels = client.get("firechannels.json") or {}
+    for client_id, channel in channels.items():
+        timestamp = channel.get("timestamp", 0)
+        if timestamp <= cutoff:
+            yield client_id

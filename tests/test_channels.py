@@ -2,7 +2,7 @@ import json
 import pytest
 
 from base64 import b64decode
-from firechannel import create_channel, delete_channel, send_message
+from firechannel import create_channel, delete_channel, send_message, find_all_expired_channels
 from firechannel.channel import decode_client_id
 
 
@@ -112,3 +112,33 @@ def test_can_send_messages_on_anon_channels(credentials, client):
         assert b64decode(data["message"]) == "hello!"
     finally:
         delete_channel(channel_id)
+
+
+def test_can_clean_up_old_channels(client):
+    # Given that I have a few channels
+    channel_ids = []
+    for _ in range(10):
+        token = create_channel()
+        channel_ids.append(decode_client_id(token))
+
+        # If I send each of those a message
+        send_message(token, "hello!")
+
+    # Then delete all expired channels
+    expired_channels = find_all_expired_channels(max_age=0)
+    for channel_id in expired_channels:
+        delete_channel(channel_id)
+
+    # I expect all of them to have been deleted
+    channels = client.get("firechannels.json") or {}
+    for channel_id in channel_ids:
+        assert channel_id not in channels
+
+
+def test_find_all_expired_channels_can_return_no_results(client):
+    # Given that I have no channels older than 365 days
+    # If I try to find all channels that have last received a message longer than 365 days ago
+    expired_channels = find_all_expired_channels(max_age=86400 * 365)
+
+    # I expect to get back an empty generator
+    assert not list(expired_channels)

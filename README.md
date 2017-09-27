@@ -65,11 +65,30 @@ Add the following rule using your [Firebase console][rules]:
 And that's about it.
 
 
+## Cleaning up old channels
+
+You can call `delete_channel` after you're done sending messages on
+it.  This will remove it from Firebase immediately.
+
+If that's not feasible, you can set up an hourly (or daily) cron job
+and delete all channels that have last received a message some amount
+of time ago like this:
+
+``` python
+from firechannel import find_all_expired_channels, delete_channel
+
+# All channels that have last received a message over a day ago
+expired_channels = find_all_expired_channels(max_age=86400)
+for channel_id in expired_channels:
+  delete_channel(channel_id)
+```
+
+
 ## Testing
 
-To run the tests, create a service account and point
-`SERVICE_KEY_FILE_PATH` to it and `FIREBASE_PROJECT` to the name of
-your project.  Finally, run `py.test`.
+To run the tests, create a service account and point an env var called
+`SERVICE_KEY_FILE_PATH` to it and another one called `FIREBASE_PROJECT`
+to the name of your project.  Finally, run `py.test`.
 
 
 ## Authors

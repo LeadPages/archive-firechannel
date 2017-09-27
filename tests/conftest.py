@@ -1,8 +1,11 @@
+import logging
 import os
 import pytest
 import time
 
 from firechannel import Firebase, set_client, get_credentials, create_channel, delete_channel
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 @pytest.fixture(scope="session")
