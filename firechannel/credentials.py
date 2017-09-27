@@ -43,7 +43,7 @@ def get_appengine_credentials():
     Returns:
       GoogleCredentials
     """
-    return AppAssertionCredentials.create_scoped(SCOPES)
+    return AppAssertionCredentials(SCOPES)
 
 
 def get_service_key_credentials(key_file_path):

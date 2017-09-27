@@ -90,6 +90,11 @@ To run the tests, create a service account and point an env var called
 `SERVICE_KEY_FILE_PATH` to it and another one called `FIREBASE_PROJECT`
 to the name of your project.  Finally, run `py.test`.
 
+### GAE tests
+
+To run the AppEngine tests, point an env var called `APPENGINE_SDK_PATH`
+to the base path of your GAE SDK and run `py.test tests_appengine`.
+
 
 ## Authors
 

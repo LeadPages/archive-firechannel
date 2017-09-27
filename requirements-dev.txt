@@ -11,3 +11,4 @@ pytest-xdist
 
 # Misc
 bumpversion
+pyyaml  # required for appengine tests
