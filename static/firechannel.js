@@ -16,47 +16,52 @@ window.Firechannel = (function() {
    * Open a socket.
    *
    * @param handler An optional object with handlers for Socket callbacks.
-   * @param onError An optional error handler.
    * @return Socket
    */
-  Firechannel.prototype.open = function(handler, onError) {
-    // Apps must be scoped so that multiple channel ids can be used
-    // since channels are scoped by auth.
-    var firebaseApp = firebase.app();
-
-    firebase.auth(firebaseApp).signInWithCustomToken(this.token).catch(onError || function(err) {
-      console.log("Error: " + err.code);
-      console.error(err.message);
-    });
-
-    var ref = firebaseApp.database().ref("firechannels/" + this.channelId);
-    var socket = new Socket(ref, handler || {});
-    return socket;
+  Firechannel.prototype.open = function(handler) {
+    return new Socket(
+      this.token,
+      this.channelId,
+      handler || {}
+    );
   };
 
   /**
    * Sockets receive data in real time form Firebase.
    *
-   * @param ref A Firebase Reference.
+   * @param token An auth token.
+   * @param channelId The channel to listen on.
    * @param handler An optional object with handlers for the callbacks.
-   */
-  var Socket = function(ref, handler) {
-    this.ref = ref;
-    this.handler = handler;
+  */
+  var Socket = function(token, channelId, handler) {
+    // Apps must be scoped so that multiple channel ids can be used
+    // since channels are scoped by auth.
+    var firebaseApp = firebase.app();
 
-    ref.on("value", function(ref) {
-      try {
-        var data = ref.val();
-        if (data === null) return;
+    firebase
+      .auth(firebaseApp)
+      .signInWithCustomToken(token)
+      .then(function() {
+        this.handler = handler;
+        this.ref = firebaseApp.database().ref("firechannels/" + channelId);
+        this.ref.on("value", function(ref) {
+          try {
+            var data = ref.val();
+            if (data === null) return;
 
-        var message = atob(data.message);
-        handler.onmessage ? handler.onmessage(message) : this.onmessage(message);
-      } catch (e) {
-        handler.onerror ? handler.onerror(e) : this.onerror(e);
-      }
-    }.bind(this));
+            var message = atob(data.message);
+            handler.onmessage ? handler.onmessage(message) : this.onmessage(message);
+          } catch (e) {
+            handler.onerror ? handler.onerror(e) : this.onerror(e);
+          }
+        }.bind(this));
 
-    handler.onopen ? handler.onopen() : this.onopen();
+        handler.onopen ? handler.onopen() : this.onopen();
+      }.bind(this))
+      .catch(function(err) {
+        console.log("Error: " + err.code);
+        console.error(err.message);
+      });
   };
 
   /**
