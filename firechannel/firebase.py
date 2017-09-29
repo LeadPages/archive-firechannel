@@ -11,6 +11,9 @@ from .pool import ThreadLocalPool
 
 _logger = logging.getLogger("firechannel.firebase")
 
+#: The max number of times Authorization errors are attempted.
+MAX_AUTH_ATTEMPTS = 3
+
 
 class Firebase(object):
     """A simple firebase real time database client.
@@ -23,6 +26,9 @@ class Firebase(object):
     """
 
     URI_TEMPLATE = u"https://{project}.firebaseio.com/{path}"
+
+    #: The number of seconds GAE access tokens last for.
+    DEFAULT_TOKEN_DURATION = 1800
 
     def __init__(self, project, credentials=None, timeout=(3.05, 15), pool_factory=ThreadLocalPool):
         if not credentials:
@@ -63,7 +69,7 @@ class Firebase(object):
                     # expires_in is always None on GAE
                     access_token, expires_in = self.credentials.get_access_token()
                     self._access_token = access_token
-                    self._access_token_expiration = current_time + (expires_in or float("+inf"))
+                    self._access_token_expiration = current_time + (expires_in or self.DEFAULT_TOKEN_DURATION)
         return self._access_token
 
     def call(self, method, path, value=None):
@@ -77,9 +83,17 @@ class Firebase(object):
         with self.pool.reserve() as session:
             call = getattr(session, method.lower())
             endpoint = self.__build_uri(path)
+            attempts = 1
 
             try:
-                response = call(endpoint, json=value, auth=self.__auth, timeout=self.timeout)
+                while attempts <= MAX_AUTH_ATTEMPTS:
+                    response = call(endpoint, json=value, auth=self.__auth, timeout=self.timeout)
+                    if response.status_code != 401:
+                        break
+
+                    _logger.debug("Access token failed. Retrying. [%d/%d]", attempts, MAX_AUTH_ATTEMPTS)
+                    attempts += 1
+
                 if response.status_code >= 500:
                     raise ServerError(response.text, cause=response)
                 elif response.status_code == 404:
