@@ -68,9 +68,16 @@ class Firebase(object):
                 if self._access_token_expiration < current_time:
                     # expires_in is always None on GAE
                     access_token, expires_in = self.credentials.get_access_token()
+                    expires_in = expires_in or self.DEFAULT_TOKEN_DURATION
                     self._access_token = access_token
-                    self._access_token_expiration = current_time + (expires_in or self.DEFAULT_TOKEN_DURATION)
+                    self._access_token_expiration = current_time + expires_in
         return self._access_token
+
+    @access_token.deleter
+    def access_token(self):
+        with self._access_token_mutex:
+            self._access_token = None
+            self._access_token_expiration = 0
 
     def call(self, method, path, value=None):
         """Call the Firebase API.
@@ -92,6 +99,7 @@ class Firebase(object):
                         break
 
                     _logger.debug("Access token failed. Retrying. [%d/%d]", attempts, MAX_AUTH_ATTEMPTS)
+                    del self.access_token
                     attempts += 1
 
                 if response.status_code >= 500:
