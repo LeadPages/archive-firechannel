@@ -3,4 +3,4 @@ from .credentials import get_credentials  # noqa
 from .firebase import Firebase  # noqa
 from .pool import Pool, ThreadLocalPool  # noqa
 
-__version__ = "0.5.3"
+__version__ = "0.5.4"
