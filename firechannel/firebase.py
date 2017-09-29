@@ -1,6 +1,8 @@
 import requests
 
 from functools import partial
+from threading import Lock
+from time import time
 
 from .credentials import ON_APPENGINE, get_credentials
 from .errors import BadRequest, ConnectionError, NotFound, ServerError, Timeout
@@ -34,12 +36,20 @@ class Firebase(object):
         self.timeout = timeout
         self.pool = pool_factory(requests.Session)
 
+        self._access_token = None
+        self._access_token_expiration = 0
+        self._access_token_mutex = Lock()
+
     def __auth(self, request):
-        access_token_data = self.credentials.get_access_token()
-        access_token = access_token_data.access_token
-        request.headers.update({
-            "Authorization": "Bearer " + access_token,
-        })
+        current_time = time()
+        if self._access_token_expiration < current_time:
+            with self._access_token_mutex:
+                if self._access_token_expiration < current_time:
+                    access_token, expires_in = self.credentials.get_access_token()
+                    self._access_token = access_token
+                    self._access_token_expiration = current_time + expires_in
+
+        request.headers.update({"Authorization": "Bearer " + self._access_token})
         return request
 
     def __build_uri(self, path):
