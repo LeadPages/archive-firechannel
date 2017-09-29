@@ -1,3 +1,4 @@
+import logging
 import requests
 
 from functools import partial
@@ -7,6 +8,8 @@ from time import time
 from .credentials import ON_APPENGINE, get_credentials
 from .errors import BadRequest, ConnectionError, NotFound, ServerError, Timeout
 from .pool import ThreadLocalPool
+
+_logger = logging.getLogger("firechannel.firebase")
 
 
 class Firebase(object):
@@ -41,15 +44,8 @@ class Firebase(object):
         self._access_token_mutex = Lock()
 
     def __auth(self, request):
-        current_time = time()
-        if self._access_token_expiration < current_time:
-            with self._access_token_mutex:
-                if self._access_token_expiration < current_time:
-                    access_token, expires_in = self.credentials.get_access_token()
-                    self._access_token = access_token
-                    self._access_token_expiration = current_time + expires_in
-
-        request.headers.update({"Authorization": "Bearer " + self._access_token})
+        _logger.debug("Using access token %r.", self.access_token)
+        request.headers.update({"Authorization": "Bearer " + self.access_token})
         return request
 
     def __build_uri(self, path):
@@ -57,6 +53,18 @@ class Firebase(object):
             project=self.project,
             path=path.lstrip("/"),
         )
+
+    @property
+    def access_token(self):
+        current_time = time()
+        if self._access_token_expiration < current_time:
+            with self._access_token_mutex:
+                if self._access_token_expiration < current_time:
+                    # expires_in is always None on GAE
+                    access_token, expires_in = self.credentials.get_access_token()
+                    self._access_token = access_token
+                    self._access_token_expiration = current_time + (expires_in or float("+inf"))
+        return self._access_token
 
     def call(self, method, path, value=None):
         """Call the Firebase API.

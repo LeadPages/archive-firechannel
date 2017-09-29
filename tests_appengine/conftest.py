@@ -16,5 +16,6 @@ def appengine_testbed():
     tb.setup_env(app_id="unittest~firechannels")
     tb.activate()
     tb.init_app_identity_stub()
+    tb.init_memcache_stub()
     yield tb
     tb.deactivate()
