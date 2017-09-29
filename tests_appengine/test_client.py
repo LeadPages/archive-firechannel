@@ -21,8 +21,7 @@ def test_can_refresh_access_tokens():
     client = get_client()
 
     # If I delete its access token
-    # I expect the underlying credentials to be refreshed
-    assert client.credentials.access_token is None
-
     del client.access_token
+
+    # I expect the underlying credentials to be refreshed
     assert client.credentials.access_token

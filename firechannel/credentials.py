@@ -112,12 +112,15 @@ def _decode_token(credentials, token, verify):
     return decode(data)
 
 
-def decode_token_appengine(credentials, token, verify=True):
+def decode_token_appengine(credentials, token, verify=False):
     """Decode a token on AppEngine.
+
+    Warning:
+      Token verification is disabled on GAE.
     """
     if isinstance(credentials, AppAssertionCredentials):
-        return _decode_token(app_identity, token, verify)
-    return _decode_token(credentials, token, verify)
+        return _decode_token(app_identity, token, False)
+    return _decode_token(credentials, token, False)
 
 
 def decode_token_service_key(credentials, token, verify=True):
