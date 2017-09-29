@@ -20,12 +20,16 @@ window.Firechannel = (function() {
    * @return Socket
    */
   Firechannel.prototype.open = function(handler, onError) {
-    firebase.auth().signInWithCustomToken(this.token).catch(onError || function(err) {
+    // Apps must be scoped so that multiple channel ids can be used
+    // since channels are scoped by auth.
+    var firebaseApp = firebase.app();
+
+    firebase.auth(firebaseApp).signInWithCustomToken(this.token).catch(onError || function(err) {
       console.log("Error: " + err.code);
       console.error(err.message);
     });
 
-    var ref = firebase.database().ref("firechannels/" + this.channelId);
+    var ref = firebaseApp.database().ref("firechannels/" + this.channelId);
     var socket = new Socket(ref, handler || {});
     return socket;
   };
@@ -72,7 +76,9 @@ window.Firechannel = (function() {
    *
    * @param err An object with a `code` field and a `message` field.
    */
-  Socket.prototype.onerror = function(err) {};
+  Socket.prototype.onerror = function(err) {
+    console.error(err);
+  };
 
   /**
    * Called when the socket is closed.
