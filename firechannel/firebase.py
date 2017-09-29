@@ -1,3 +1,4 @@
+import httplib2
 import logging
 import requests
 
@@ -78,6 +79,9 @@ class Firebase(object):
         with self._access_token_mutex:
             self._access_token = None
             self._access_token_expiration = 0
+            # GAE access tokens are not refreshed automatically due to
+            # a bug in oauth2client so we force a refresh here.
+            self.credentials.refresh(httplib2.Http())
 
     def call(self, method, path, value=None):
         """Call the Firebase API.
