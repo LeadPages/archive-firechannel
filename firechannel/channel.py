@@ -160,6 +160,10 @@ def find_all_expired_channels(max_age=3600, firebase_client=None):
     cutoff = (time.time() - max_age) * 1000
     channels = client.get("firechannels.json") or {}
     for client_id, channel in channels.items():
+        if not isinstance(channel, dict):
+            yield client_id
+            continue
+
         timestamp = channel.get("timestamp", 0)
         if timestamp <= cutoff:
             yield client_id
