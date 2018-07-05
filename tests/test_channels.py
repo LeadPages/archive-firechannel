@@ -146,10 +146,13 @@ def test_can_clean_up_broken_channels(client):
         send_message(token, "hello!")
 
     # And somehow a message was written directly to firechannels.json
-    client.patch(u"firechannels.json".format(client_id), {
+    client.patch(u"firechannels.json", {
         "message": "AM BROKEN!",
         "timestamp": 500,
     })
+    channels = client.get("firechannels.json") or {}
+    assert "message" in channels
+    assert "timestamp" in channels
 
     # Then when I delete all expired channels
     expired_channels = find_all_expired_channels(max_age=0)
