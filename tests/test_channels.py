@@ -135,6 +135,37 @@ def test_can_clean_up_old_channels(client):
         assert channel_id not in channels
 
 
+def test_can_clean_up_broken_channels(client):
+    # Given that I have a few channels
+    channel_ids = []
+    for _ in range(10):
+        token = create_channel()
+        channel_ids.append(decode_client_id(token))
+
+        # And I've sent each of those a message
+        send_message(token, "hello!")
+
+    # And somehow a message was written directly to firechannels.json
+    client.patch(u"firechannels.json".format(client_id), {
+        "message": "AM BROKEN!",
+        "timestamp": 500,
+    })
+
+    # Then when I delete all expired channels
+    expired_channels = find_all_expired_channels(max_age=0)
+    for channel_id in expired_channels:
+        delete_channel(channel_id)
+
+    # I expect all of them to have been deleted
+    channels = client.get("firechannels.json") or {}
+    for channel_id in channel_ids:
+        assert channel_id not in channels
+
+    # Including the broken ones
+    assert "message" not in channels
+    assert "timestamp" not in channels
+
+
 def test_find_all_expired_channels_can_return_no_results(client):
     # Given that I have no channels older than 365 days
     # If I try to find all channels that have last received a message longer than 365 days ago
