@@ -2,8 +2,10 @@ import hmac
 import json
 import time
 
+import google.auth
+import google.auth.credentials
+
 from google.oauth2 import service_account
-from google.auth import app_engine
 
 from base64 import b64encode, b64decode
 
@@ -38,33 +40,44 @@ IDENTITY_ENDPOINT = "https://identitytoolkit.googleapis.com/google.identity.iden
 TOKEN_HEADER = encode({"typ": "JWT", "alg": "RS256"})
 
 
-def get_appengine_credentials():
+def get_credentials():
     """Generates a credentials object for the current environment.
 
     Returns:
-      google.auth.app_engine.Credentials
+      google.auth.credentials.Credentials
     """
-    return app_engine.Credentials(scopes=SCOPES)
+    credentials, _project_id = google.auth.default(scopes=SCOPES)
 
+    # Credentials from the GCloud SDK, for example, do not implement Signing.
+    assert isinstance(credentials, google.auth.credentials.Signing), \
+        "Unsupported credential kind; credentials must implement Signing"
 
-def get_service_key_credentials(key_file_path):
-    """Generate a credentials object from a service key.
-
-    Parameters:
-      key_file_path(str): The absolute path to a service key file.
-
-    Returns:
-      google.oauth2.service_account.Credentials
-    """
-    credentials = service_account.Credentials.from_service_account_file(
-        key_file_path,
-        scopes=SCOPES,
-    )
     return credentials
 
 
+def get_appengine_credentials():
+    """Deprecated.  Alias for `get_credentials()`.
+
+    Returns:
+      google.auth.credentials.Credentials
+    """
+    return get_credentials()
+
+
+def get_service_key_credentials(key_file_path):
+    """Generate a Credentials object from a key file.
+
+    Returns:
+      google.auth.credentials.Credentials
+    """
+    return service_account.Credentials.from_service_account_file(
+        key_file_path,
+        scopes=SCOPES,
+    )
+
+
 def build_token(credentials, params, duration_minutes):
-    issuer = credentials.service_account_email
+    issuer = credentials.signer_email
     issued_at = int(time.time())
 
     data = {
@@ -116,8 +129,6 @@ def decode_token_service_key(credentials, token, verify=True):
 
 
 if ON_APPENGINE:
-    get_credentials = get_appengine_credentials
     decode_token = decode_token_appengine
 else:
-    get_credentials = get_service_key_credentials
     decode_token = decode_token_service_key

@@ -10,9 +10,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 @pytest.fixture(scope="session")
 def credentials():
-    key_file_path = os.getenv("SERVICE_KEY_FILE_PATH")
-    assert key_file_path, "SERVICE_KEY_FILE_PATH must be set"
-    return get_credentials(key_file_path)
+    key_file_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    assert key_file_path, "GOOGLE_APPLICATION_CREDENTIALS must be set"
+    return get_credentials()
 
 
 @pytest.fixture(scope="session", autouse=True)
