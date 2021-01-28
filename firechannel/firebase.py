@@ -1,10 +1,11 @@
-import httplib2
 import logging
 import requests
 
 from functools import partial
 from threading import Lock
-from time import time
+
+from google.auth.transport.requests import Request
+from google.auth.exceptions import GoogleAuthError
 
 from .credentials import ON_APPENGINE, get_credentials
 from .errors import BadRequest, ConnectionError, NotFound, ServerError, Timeout
@@ -28,9 +29,6 @@ class Firebase(object):
 
     URI_TEMPLATE = u"https://{project}.firebaseio.com/{path}"
 
-    #: The number of seconds GAE access tokens last for.
-    DEFAULT_TOKEN_DURATION = 1800
-
     def __init__(self, project, credentials=None, timeout=(3.05, 15), pool_factory=ThreadLocalPool):
         if not credentials:
             if not ON_APPENGINE:
@@ -46,13 +44,12 @@ class Firebase(object):
         self.timeout = timeout
         self.pool = pool_factory(requests.Session)
 
-        self._access_token = None
-        self._access_token_expiration = 0
         self._access_token_mutex = Lock()
 
     def __auth(self, request):
-        _logger.debug("Using access token %r.", self.access_token)
-        request.headers.update({"Authorization": "Bearer " + self.access_token})
+        access_token = self.access_token
+        _logger.debug("Using access token %r.", access_token)
+        request.headers["Authorization"] = "Bearer " + access_token
         return request
 
     def __build_uri(self, path):
@@ -61,27 +58,15 @@ class Firebase(object):
             path=path.lstrip("/"),
         )
 
+    def refresh_token(self):
+        with self._access_token_mutex:
+            self.credentials.refresh(Request())
+
     @property
     def access_token(self):
-        current_time = time()
-        if self._access_token_expiration < current_time:
-            with self._access_token_mutex:
-                if self._access_token_expiration < current_time:
-                    # expires_in is always None on GAE
-                    access_token, expires_in = self.credentials.get_access_token()
-                    expires_in = expires_in or self.DEFAULT_TOKEN_DURATION
-                    self._access_token = access_token
-                    self._access_token_expiration = current_time + expires_in
-        return self._access_token
-
-    @access_token.deleter
-    def access_token(self):
-        with self._access_token_mutex:
-            self._access_token = None
-            self._access_token_expiration = 0
-            # GAE access tokens are not refreshed automatically due to
-            # a bug in oauth2client so we force a refresh here.
-            self.credentials.refresh(httplib2.Http())
+        if not self.credentials.valid:
+            self.refresh_token()
+        return self.credentials.token
 
     def call(self, method, path, value=None):
         """Call the Firebase API.
@@ -103,7 +88,10 @@ class Firebase(object):
                         break
 
                     _logger.debug("Access token failed. Retrying. [%d/%d]", attempts, MAX_AUTH_ATTEMPTS)
-                    del self.access_token
+                    try:
+                        self.refresh_token()
+                    except GoogleAuthError, e:
+                        _logger.warning("Failed refreshing access token: %s", e)
                     attempts += 1
 
                 if response.status_code >= 500:

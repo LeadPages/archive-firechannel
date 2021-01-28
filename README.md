@@ -86,9 +86,9 @@ for channel_id in expired_channels:
 
 ## Testing
 
-To run the tests, create a service account and point an env var called
-`SERVICE_KEY_FILE_PATH` to it and another one called `FIREBASE_PROJECT`
-to the name of your project.  Finally, run `py.test`.
+To run the tests, create a service account and point an env var
+called `GOOGLE_APPLICATION_CREDENTIALS` to it and another one called
+`FIREBASE_PROJECT` to the name of your project. Finally, run `py.test`.
 
 ### GAE tests
 
@@ -111,6 +111,6 @@ Please read [our contributor's guide](./CONTRIBUTING.md).
 
 [setup]: https://console.firebase.google.com/project/_/overview
 [rules]: https://console.firebase.google.com/project/_/database/rules
-[leadpages]: http://leadpages.net
-[careers]: http://www.leadpages.net/careers
+[leadpages]: https://leadpages.com
+[careers]: https://www.leadpages.com/careers
 [contributors]: https://github.com/leadpages/gcloud_requests/graphs/contributors

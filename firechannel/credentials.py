@@ -2,13 +2,16 @@ import hmac
 import json
 import time
 
+import google.auth
+import google.auth.credentials
+
+from google.oauth2 import service_account
+
 from base64 import b64encode, b64decode
-from oauth2client.client import GoogleCredentials
 
 
 try:
     from google.appengine.api import app_identity
-    from oauth2client.appengine import AppAssertionCredentials
 
     ON_APPENGINE = True
 except ImportError:
@@ -37,30 +40,44 @@ IDENTITY_ENDPOINT = "https://identitytoolkit.googleapis.com/google.identity.iden
 TOKEN_HEADER = encode({"typ": "JWT", "alg": "RS256"})
 
 
-def get_appengine_credentials():
+def get_credentials():
     """Generates a credentials object for the current environment.
 
     Returns:
-      GoogleCredentials
+      google.auth.credentials.Credentials
     """
-    return AppAssertionCredentials(SCOPES)
+    credentials, _project_id = google.auth.default(scopes=SCOPES)
 
+    # Credentials from the GCloud SDK, for example, do not implement Signing.
+    assert isinstance(credentials, google.auth.credentials.Signing), \
+        "Unsupported credential kind; credentials must implement Signing"
 
-def get_service_key_credentials(key_file_path):
-    """Generate a credentials object from a service key.
-
-    Parameters:
-      key_file_path(str): The absolute path to a service key file.
-
-    Returns:
-      GoogleCredentials
-    """
-    credentials = GoogleCredentials.from_stream(key_file_path)
-    credentials._scopes = " ".join(SCOPES)
     return credentials
 
 
-def _build_token(credentials, issuer, params, duration_minutes):
+def get_appengine_credentials():
+    """Deprecated.  Alias for `get_credentials()`.
+
+    Returns:
+      google.auth.credentials.Credentials
+    """
+    return get_credentials()
+
+
+def get_service_key_credentials(key_file_path):
+    """Generate a Credentials object from a key file.
+
+    Returns:
+      google.auth.credentials.Credentials
+    """
+    return service_account.Credentials.from_service_account_file(
+        key_file_path,
+        scopes=SCOPES,
+    )
+
+
+def build_token(credentials, params, duration_minutes):
+    issuer = credentials.signer_email
     issued_at = int(time.time())
 
     data = {
@@ -73,24 +90,8 @@ def _build_token(credentials, issuer, params, duration_minutes):
     data.update(params)
 
     payload = TOKEN_HEADER + "." + encode(data)
-    _, signature = credentials.sign_blob(payload)
+    signature = credentials.sign_bytes(payload)
     return payload + "." + b64encode(signature)
-
-
-def build_token_appengine(credentials, params, duration_minutes):
-    """Build a token on AppEngine.
-    """
-    if isinstance(credentials, AppAssertionCredentials):
-        issuer = app_identity.get_service_account_name()
-        return _build_token(app_identity, issuer, params, duration_minutes)
-    return build_token_service_key(credentials, params, duration_minutes)
-
-
-def build_token_service_key(credentials, params, duration_minutes):
-    """Build a token using a service key.
-    """
-    issuer = credentials._service_account_email
-    return _build_token(credentials, issuer, params, duration_minutes)
 
 
 def _decode_token(credentials, token, verify):
@@ -105,7 +106,7 @@ def _decode_token(credentials, token, verify):
     if verify:
         payload = header + "." + data
         given_signature = b64decode(signature)
-        _, expected_signature = credentials.sign_blob(payload)
+        expected_signature = credentials.sign_bytes(payload)
         if not hmac.compare_digest(given_signature, expected_signature):
             raise ValueError("Invalid token signature.")
 
@@ -118,22 +119,16 @@ def decode_token_appengine(credentials, token, verify=False):
     Warning:
       Token verification is disabled on GAE.
     """
-    if isinstance(credentials, AppAssertionCredentials):
-        return _decode_token(app_identity, token, False)
     return _decode_token(credentials, token, False)
 
 
 def decode_token_service_key(credentials, token, verify=True):
-    """Decode a token on AppEngine.
+    """Decode a token from a service account.
     """
     return _decode_token(credentials, token, verify)
 
 
 if ON_APPENGINE:
-    get_credentials = get_appengine_credentials
-    build_token = build_token_appengine
     decode_token = decode_token_appengine
 else:
-    get_credentials = get_service_key_credentials
-    build_token = build_token_service_key
     decode_token = decode_token_service_key
