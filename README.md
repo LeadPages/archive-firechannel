@@ -1,3 +1,30 @@
+# Repository Discontinuation Notice
+
+## ⚠️ Repository Discontinued
+
+**This repository is no longer maintained** and has been officially discontinued as of [2024-08-09]. The content and functionality previously provided here have been transferred to the [LeadPages](https://github.com/LeadPages/lead-pages) project.
+
+### Reason for Discontinuation
+
+This decision has been made for the following reasons:
+
+1. **Content Migration**: All relevant code, documentation, and resources have been successfully migrated to the LeadPages project. This ensures better integration and maintenance under a single, active project.
+
+
+### Archived State
+
+To preserve the repository's history and for reference purposes, this repository will remain in an archived state. However, no further updates, bug fixes, or support will be provided.
+
+If you have any questions or need assistance with the migration, please feel free to contact the maintainers via the LeadPages project.
+
+Thank you for your understanding and support.
+
+---
+
+*This notice was last updated on [2024-08-09].*
+
+
+
 # firechannel
 
 An almost-dropin replacement for the GAE channels API using Firebase.
