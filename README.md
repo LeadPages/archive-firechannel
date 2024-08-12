@@ -1,3 +1,9 @@
+# Deprecated
+This project is no longer maintained.
+
+
+------
+
 # firechannel
 
 An almost-dropin replacement for the GAE channels API using Firebase.
